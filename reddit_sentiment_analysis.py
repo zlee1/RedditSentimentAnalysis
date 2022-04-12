@@ -88,31 +88,37 @@ def prepare_text(data, train_proportion = 0.8, max_len=50, tokenizer=None):
 def generate_ticker_data(tickers = None):
     if(tickers is None): return None
 
-    cur_tokenizer = None
+    if("tokenizer.pkl" in os.listdir("data/tokenizer/")):
+        with open("data/tokenizer/tokenizer.pkl", "rb") as f:
+            cur_tokenizer = pickle.load(f)
+    else:
+        cur_tokenizer = None
 
     for ticker in tickers:
-        if(f"{ticker}.pkl" in os.listdir('data/')):
-            continue
+        try:
+            if(f"{ticker}.pkl" in os.listdir('data/')):
+                continue
 
-        data = yf.download(ticker)
-        change, up = daily_change(data)
-        data["Daily_Change"] = change
-        data["Positive_Change"] = up
-        data = data.sample(frac=1)
+            data = yf.download(ticker)
+            change, up = daily_change(data)
+            data["Daily_Change"] = change
+            data["Positive_Change"] = up
+            data = data.sample(frac=1)
 
-        data["Comments"] = get_pre_open_content(data, ticker, limit=100)
+            data["Comments"] = get_pre_open_content(data, ticker, limit=100)
 
-        train, train_padded, test, test_padded, cur_tokenizer = prepare_text(data, tokenizer=cur_tokenizer)
+            train, train_padded, test, test_padded, cur_tokenizer = prepare_text(data, tokenizer=cur_tokenizer)
 
-        with open(f"data/{ticker}.pkl", "wb+") as f:
-            pickle.dump((train, train_padded, test, test_padded), f)
+            with open(f"data/{ticker}.pkl", "wb+") as f:
+                pickle.dump((train, train_padded, test, test_padded), f)
 
-        used_tickers = "_".join(tickers[:tickers.index(ticker)+1])
-
-        with open(f"data/tokenizer/tokenizer_{used_tickers}.pkl", "wb+") as f:
-            pickle.dump(tokenizer, f)
+            with open(f"data/tokenizer/tokenizer.pkl", "wb+") as f:
+                pickle.dump(cur_tokenizer, f)
+        except Exception as e:
+            print(e)
 
 if __name__ == '__main__':
+
     warnings.filterwarnings('ignore')
 
     # Load client_id, secret_id, and user_agent
